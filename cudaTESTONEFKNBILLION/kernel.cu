@@ -33,6 +33,7 @@ int main()
 	for (int size = 100; size < 100001; size *= 10)
 	{
 		std::cout << "Working on size: " << size << std::endl;
+		fprintf(file, "DATA SIZE: %i \n", size);
 
 		// Allocate memory for arrays
 		data = (int*)malloc((size + 1) * sizeof(int));
@@ -48,7 +49,7 @@ int main()
 		// GPU SORTING
 		for (int tasksPerThread = 1; tasksPerThread < 9; tasksPerThread *= 2)
 		{
-			std::cout << "Tasks per thread: " << tasksPerThread << std::endl;
+			std::cout << std::endl << "Tasks per thread: " << tasksPerThread;
 
 			int threads = (size + 1) / tasksPerThread;
 			int blocks = (threads - 1) / 1024 + 1; // 1024 to match current GPU limitations
@@ -141,7 +142,7 @@ void unoptimizedSort(int* randomNumbers, int size, FILE* file)
 	t = clock() - t;
 
 	std::cout << "CPU Odd-Even Sorting took: " << t << " clicks and " << ((float)t)/CLOCKS_PER_SEC << " seconds." << std::endl;
-	fprintf(file, "CPU: %i %.4f \n", size,((float)t) / CLOCKS_PER_SEC);
+	fprintf(file, "\nCPU: %.4f \n", ((float)t) / CLOCKS_PER_SEC);
 	
 	testIfSorted(randomNumbers);
 }
@@ -227,8 +228,8 @@ void cudaSort(int* &data, int size, int blocks, int tasksPerThread, FILE* file)
 	testIfSorted(data);
 
 	t = clock() - t;
-	std::cout << "GPU sorting took: " << t << "clicks (" << ((int)t) / CLOCKS_PER_SEC << " seconds.)" << endl;
-	fprintf(file, "GPU %i: %.4i,", size, ((int)t) / CLOCKS_PER_SEC);
+	std::cout << "GPU sorting took: " << t << "clicks (" << ((float)t) / CLOCKS_PER_SEC << " seconds.)" << endl;
+	fprintf(file, "GPU: %.4f \n", ((float)t) / CLOCKS_PER_SEC);
 
 	cudaFree(devArray);
 	cudaFree(tempArray);
