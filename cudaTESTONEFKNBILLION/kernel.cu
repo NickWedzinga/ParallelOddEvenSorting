@@ -16,7 +16,7 @@ void unoptimizedSort(int* randomNumbers, int size, FILE* file);
 void testIfSorted(int* randomNumbers);
 bool gpuSortingTest(int* data);
 
-void cudaSort(int* &data, int size, int blocks, int tasksPerThread, FILE* file);
+void cudaSort(int* &data, int size, int blocks, int threads, int tasksPerThread, FILE* file);
 __global__ void oddEvenKernel(int* data, int size, int tasksPerThread, int index);
 
 int main()
@@ -47,15 +47,20 @@ int main()
 		unoptimizedSort(data, size, file);
 
 		// GPU SORTING
-		for (int tasksPerThread = 1; tasksPerThread < 9; tasksPerThread *= 2)
+		for (int tasksPerThread = 1; tasksPerThread < 5; tasksPerThread *= 2)
 		{
-			std::cout << std::endl << "Tasks per thread: " << tasksPerThread;
-
-			int threads = (size + 1) / tasksPerThread;
+			int threads = (size) / tasksPerThread;
+			//int threads = 500 / tasksPerThread;
 			int blocks = (threads - 1) / 1024 + 1; // 1024 to match current GPU limitations
 
+			//std::cout << std::endl << "Threads: " << threads;
+			//std::cout << std::endl << "Blocks: " << tasksPerThread;
+
 			// Call GPU helper function
-			cudaSort(data2, size, blocks, tasksPerThread, file);
+			cudaSort(data2, size, blocks, threads, tasksPerThread, file);
+
+			// Reset array
+			copyArray(data2, backup, size);
 		}
 		std::cout << std::endl << "------------------------------------------------------------------" << std::endl;
 
@@ -175,7 +180,7 @@ bool gpuSortingTest(int* data)
 }
 
 // CUDA allocating function
-void cudaSort(int* &data, int size, int blocks, int tasksPerThread, FILE* file)
+void cudaSort(int* &data, int size, int blocks, int threads, int tasksPerThread, FILE* file)
 {
 	int* devArray = 0;
 	clock_t t;
@@ -236,13 +241,19 @@ void cudaSort(int* &data, int size, int blocks, int tasksPerThread, FILE* file)
 }
 
 // GPU Kernel function
-__global__ void oddEvenKernel(int* data, int size, int tasksPerThread, int rowIndex)
+__global__ void oddEvenKernel(int* data, int size, int tasksPerThread, int index)
 {
-	// Sort even indices
-	if (data[rowIndex] > data[rowIndex + 1])
-	{
-		int temp = data[rowIndex];
-		data[rowIndex] = data[rowIndex + 1];
-		data[rowIndex + 1] = temp;
-	}
+	// thread index * 
+	//int start = (threadIdx.x + blockIdx.x * blockDim.x) * tasksPerThread + index;
+
+	//// Sort even indices
+	//for (int element = start; element < tasksPerThread; ++element)
+	//{
+		if (data[index] > data[index + 1])
+		{
+			int temp = data[index];
+			data[index] = data[index + 1];
+			data[index + 1] = temp;
+		}
+	//}
 }
