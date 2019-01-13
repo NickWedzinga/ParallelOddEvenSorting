@@ -30,7 +30,7 @@ int main()
 
 	fprintf(file, "ODD-EVEN SORTING DATA\n---------------------------------------------\n");
 	// Sorting, size 100, 1000, 10000, 100000
-	for (int size = 100; size < 1001 /*100001*/; size *= 10)
+	for (int size = 100; size < 100001; size *= 10)
 	{
 		std::cout << "Working on size: " << size << std::endl;
 
@@ -200,13 +200,13 @@ void cudaSort(int* &data, int size, int blocks, int tasksPerThread, FILE* file)
 	bool sorted = false;
 	while (!sorted)
 	{
-		sorted = true;
-		for (int i = 0; i < (size - 2); i *= 2) // change how often its called
+		for (int i = 0; i < (size - 2); i += 2) // change how often its called
 		{
+			//cout << "Call GPU for even, current index: " << i << endl;
 			oddEvenKernel << <blocks, 1024 >> > (devArray, size, tasksPerThread, i);
 			//oddEvenKernel << <blocks, 1024 >> > (devArray, size, tasksPerThread, i * tasksPerThread);
 		}
-		for (int i = 1; i < (size - 2); i *= 2) // change how often its called
+		for (int i = 1; i < (size - 2); i += 2) // change how often its called
 		{
 			oddEvenKernel << <blocks, 1024 >> > (devArray, size, tasksPerThread, i);
 			//oddEvenKernel << <blocks, 1024 >> > (devArray, size, tasksPerThread, i * tasksPerThread);
@@ -219,6 +219,7 @@ void cudaSort(int* &data, int size, int blocks, int tasksPerThread, FILE* file)
 			return;
 		}
 		sorted = gpuSortingTest(tempArray);
+		//cout << "Sorted: " << sorted << endl;
 	}
 
 
