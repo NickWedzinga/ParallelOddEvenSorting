@@ -236,24 +236,11 @@ void cudaSort(int* &data, int size, int blocks, int tasksPerThread, FILE* file)
 // GPU Kernel function
 __global__ void oddEvenKernel(int* data, int size, int tasksPerThread, int rowIndex)
 {
-	bool sorted = false;
-
-	// Loop until sorted
-	while (!sorted)
+	// Sort even indices
+	if (data[rowIndex] > data[rowIndex + 1])
 	{
-		int index = 0;
-		sorted = true;
-
-		// Sort even indices
-		for (index; index < size - 2; index += 2)
-		{
-			if (data[index] > data[index + 1])
-			{
-				int temp = data[index];
-				data[index] = data[index + 1];
-				data[index + 1] = temp;
-				sorted = false;
-			}
-		}
+		int temp = data[rowIndex];
+		data[rowIndex] = data[rowIndex + 1];
+		data[rowIndex + 1] = temp;
 	}
 }
