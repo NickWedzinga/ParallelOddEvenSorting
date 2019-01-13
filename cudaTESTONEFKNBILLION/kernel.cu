@@ -14,9 +14,10 @@ void copyArray(int* data, int* backup, int size);
 
 void unoptimizedSort(int* randomNumbers, int size, FILE* file);
 void testIfSorted(int* randomNumbers);
+bool gpuSortingTest(int* data);
 
-void cudaSort(int* data2, int size, int blocks, int tasksPerThread, FILE* file);
-__global__ void oddEvenKernel(const int *randomNumberOptimized, int *sortedNumbers);
+void cudaSort(int* &data, int size, int blocks, int tasksPerThread, FILE* file);
+__global__ void oddEvenKernel(int* data, int size, int tasksPerThread, int index);
 
 int main()
 {
@@ -29,14 +30,14 @@ int main()
 
 	fprintf(file, "ODD-EVEN SORTING DATA\n---------------------------------------------\n");
 	// Sorting, size 100, 1000, 10000, 100000
-	for (int size = 100; size < 100001; size *= 10)
+	for (int size = 100; size < 1001 /*100001*/; size *= 10)
 	{
 		std::cout << "Working on size: " << size << std::endl;
 
 		// Allocate memory for arrays
-		data = (int*)malloc((size + 1) * size * sizeof(int));
-		backup = (int*)malloc((size + 1) * size * sizeof(int));
-		data2 = (int*)malloc((size + 1) * size * sizeof(int));
+		data = (int*)malloc((size + 1) * sizeof(int));
+		backup = (int*)malloc((size + 1) * sizeof(int));
+		data2 = (int*)malloc((size + 1) * sizeof(int));
 
 		// Fill arrays
 		fillArrays(data, data2, backup, size);
@@ -45,28 +46,33 @@ int main()
 		unoptimizedSort(data, size, file);
 
 		// GPU SORTING
-		//for (int tasksPerThread = 1; tasksPerThread < 2; ++tasksPerThread)
-		//{
-		//	std::cout << "Tasks per thread: " << tasksPerThread << std::endl;
+		for (int tasksPerThread = 1; tasksPerThread < 9; tasksPerThread *= 2)
+		{
+			std::cout << "Tasks per thread: " << tasksPerThread << std::endl;
 
-		//	int threads = (size + 1) / tasksPerThread;
-		//	int blocks = (threads - 1) / 1024 + 1; // 1024 to match current GPU limitations
+			int threads = (size + 1) / tasksPerThread;
+			int blocks = (threads - 1) / 1024 + 1; // 1024 to match current GPU limitations
 
-		//	// Call GPU helper function
-		//	cudaSort(data2, size, blocks, tasksPerThread, file);
-		//}
+			// Call GPU helper function
+			cudaSort(data2, size, blocks, tasksPerThread, file);
+		}
 		std::cout << std::endl << "------------------------------------------------------------------" << std::endl;
+
+		// Release array memory
+		free(data);
+		free(data2);
+		free(backup);
 	}
 	
 
 	// cudaDeviceReset must be called before exiting in order for profiling and
 	// tracing tools such as Nsight and Visual Profiler to show complete traces.
-	/*cudaStatus = cudaDeviceReset();
+	cudaStatus = cudaDeviceReset();
 	if (cudaStatus != cudaSuccess)
 	{
 		fprintf(stderr, "cudaDeviceReset function in main failed.");
 		return 1;
-	}*/
+	}
 
 	fclose(file);
 	std::cout << "FINISHED! Press any key to exit." << std::endl;
@@ -150,130 +156,104 @@ void testIfSorted(int* randomNumbers)
 			sorted = false;
 	}
 	if (sorted)
-		cout << "The array is sorted!" << endl;
+		cout << endl << "The array is sorted!" << endl;
 	else
-		cout << "The array is not sorted..." << endl;
+		cout << endl << "The array is not sorted..." << endl;
 }
 
+bool gpuSortingTest(int* data)
+{
+	// Loop through array and check if sorted
+	bool sorted = true;
+	for (int i = 1; i < sizeof(data); ++i)
+	{
+		if (data[i] < data[i - 1])
+			sorted = false;
+	}
+	return sorted;
+}
 
 // CUDA allocating function
-void cudaSort(int* data2, int size, int blocks, int tasksPerThread, FILE* file)
+void cudaSort(int* &data, int size, int blocks, int tasksPerThread, FILE* file)
 {
-	//	int *dev_randomNumbers = 0;
-	//	int *dev_sortedNumbers = 0;
-	//	int *sortedNumbers = 0;
-	//	cudaError_t cudaStatus;
-	//
-	//	//Link CUDA with GPU and error-check.
-	//	cudaStatus = cudaSetDevice(0);
-	//	if (cudaStatus != cudaSuccess)
-	//	{
-	//		fprintf(stderr, "cudaSetDevice function failed. Could not find capable GPU.");
-	//		goto Error;
-	//	}
-	//
-	//	// Allocate GPU buffer for random int array and error-check.
-	//	cudaStatus = cudaMalloc((void**)&dev_randomNumbers, sizeRandoms * sizeof(int));
-	//	if (cudaStatus != cudaSuccess)
-	//	{
-	//		fprintf(stderr, "cudaMalloc of random int array failed.");
-	//		goto Error;
-	//	}
-	//
-	//	// Allocate GPU buffer for sorted int array and error-check.
-	//	cudaStatus = cudaMalloc((void**)&dev_sortedNumbers, sizeRandoms * sizeof(int));
-	//	if (cudaStatus != cudaSuccess)
-	//	{
-	//		fprintf(stderr, "cudaMalloc of sorted int array failed.");
-	//		goto Error;
-	//	}
-	//
-	//	//Copy input int array from host memory to GPU buffers.
-	//	cudaStatus = cudaMemcpy(dev_randomNumbers, randomNumbersOptimized, sizeRandoms * sizeof(int), cudaMemcpyHostToDevice);
-	//	if (cudaStatus != cudaSuccess)
-	//	{
-	//		fprintf(stderr, "cudaMemcpy of random ints failed.");
-	//		goto Error;
-	//	}
-	//
-	//
-	//	// Launch a kernel on the GPU with one thread for each element.
-	//	double start = clock();
-	//	oddEvenKernel <<<2, 1024>>> (dev_randomNumbers, dev_sortedNumbers); //2 blocks, 1024 threads per block?
-	//	double finish = clock() - start;
-	//	finish /= CLOCKS_PER_SEC;
-	//
-	//	// Check for any errors launching the kernel
-	//	cudaStatus = cudaGetLastError();
-	//	if (cudaStatus != cudaSuccess)
-	//	{
-	//		fprintf(stderr, "oddEvenKernel launch failed: %s\n", cudaGetErrorString(cudaStatus));
-	//		goto Error;
-	//	}
-	//
-	//	cout << std::endl << "Optimized time taken: " << finish << std::endl;
-	//
-	//	// cudaDeviceSynchronize waits for the kernel to finish, and returns
-	//	// any errors encountered during the launch.
-	//	cudaStatus = cudaDeviceSynchronize();
-	//	if (cudaStatus != cudaSuccess)
-	//	{
-	//		fprintf(stderr, "cudaDeviceSynchronize returned error code %d after launching oddEvenKernel!\n", cudaStatus);
-	//		goto Error;
-	//	}
-	//
-	//	//Copy sorted int array back to CPU.
-	//	cudaStatus = cudaMemcpy(sortedNumbers, dev_sortedNumbers, sizeRandoms * sizeof(int), cudaMemcpyDeviceToHost);
-	//	if (cudaStatus != cudaSuccess)
-	//	{
-	//		fprintf(stderr, "cudaMemcpy from GPU to CPU failed.");
-	//		goto Error;
-	//	}
-	//	//testIfSorted(sortedNumbers);
-	//Error:
-	//	cudaFree(dev_randomNumbers);
-	//	cudaFree(dev_sortedNumbers);
-	//
-	//	return cudaStatus;
-	return;
+	int* devArray = 0;
+	clock_t t;
+	t = clock();
+
+	// Allocate array to GPU
+	cudaError_t cudaStatus = cudaMalloc((void**)&devArray, (size + 1) * sizeof(int));
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaMalloc failed for array\n");
+		return;
+	}
+	// Copy array data to GPU
+	cudaStatus = cudaMemcpy(devArray, data, (size + 1) * sizeof(int), cudaMemcpyHostToDevice);
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaMemcpy failed for CPU -> GPU\n");
+		return;
+	}
+
+	// Create temp array to retrieve array back from GPU
+	int* tempArray = (int*)malloc((size + 1) * sizeof(int));
+
+	// Call kernel function
+	bool sorted = false;
+	while (!sorted)
+	{
+		sorted = true;
+		for (int i = 0; i < (size - 2); i *= 2) // change how often its called
+		{
+			oddEvenKernel << <blocks, 1024 >> > (devArray, size, tasksPerThread, i);
+			//oddEvenKernel << <blocks, 1024 >> > (devArray, size, tasksPerThread, i * tasksPerThread);
+		}
+		for (int i = 1; i < (size - 2); i *= 2) // change how often its called
+		{
+			oddEvenKernel << <blocks, 1024 >> > (devArray, size, tasksPerThread, i);
+			//oddEvenKernel << <blocks, 1024 >> > (devArray, size, tasksPerThread, i * tasksPerThread);
+		}
+
+		// Retreive sorted array back from GPU
+		cudaStatus = cudaMemcpy((void*)tempArray, (void*)devArray, (size + 1) * sizeof(int), cudaMemcpyDeviceToHost);
+		if (cudaStatus != cudaSuccess) {
+			fprintf(stderr, "cudaMemcpy failed for GPU -> CPU\n");
+			return;
+		}
+		sorted = gpuSortingTest(tempArray);
+	}
+
+
+	data = tempArray;
+	testIfSorted(data);
+
+	t = clock() - t;
+	std::cout << "GPU sorting took: " << t << "clicks (" << ((int)t) / CLOCKS_PER_SEC << " seconds.)" << endl;
+	fprintf(file, "GPU %i: %.4i,", size, ((int)t) / CLOCKS_PER_SEC);
+
+	cudaFree(devArray);
+	cudaFree(tempArray);
 }
 
 // GPU Kernel function
-__global__ void oddEvenKernel(const int *randomNumberOptimized, int *sortedNumbers)
+__global__ void oddEvenKernel(int* data, int size, int tasksPerThread, int rowIndex)
 {
-	int i = threadIdx.x;
-	//c[i] = a[i] + b[i];
-	sortedNumbers[i] = randomNumberOptimized[i];
+	bool sorted = false;
 
-	//Odd Even Sort with optimization
-	/*bool sorted = false;
+	// Loop until sorted
 	while (!sorted)
 	{
 		int index = 0;
 		sorted = true;
 
-		for (index; index < 99998; index += 2)
+		// Sort even indices
+		for (index; index < size - 2; index += 2)
 		{
-			if (randomNumbers[index] > randomNumbers[index + 1])
+			if (data[index] > data[index + 1])
 			{
-				int temp = randomNumbers[index];
-				randomNumbers[index] = randomNumbers[index + 1];
-				randomNumbers[index + 1] = temp;
+				int temp = data[index];
+				data[index] = data[index + 1];
+				data[index + 1] = temp;
 				sorted = false;
 			}
 		}
-
-		index = 1;
-
-		for (index; index < 99998; index += 2)
-		{
-			if (randomNumbers[index] > randomNumbers[index + 1])
-			{
-				int temp = randomNumbers[index];
-				randomNumbers[index] = randomNumbers[index + 1];
-				randomNumbers[index + 1] = temp;
-				sorted = false;
-			}
-		}
-	}*/
+	}
 }
