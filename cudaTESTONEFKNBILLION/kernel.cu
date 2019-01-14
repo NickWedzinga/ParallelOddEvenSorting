@@ -16,7 +16,7 @@ void unoptimizedSort(int* randomNumbers, int size, FILE* file);
 void testIfSorted(int* randomNumbers);
 bool gpuSortingTest(int* data);
 
-void cudaSort(int* &data, int size, int blocks, int threads, int tasksPerThread, FILE* file);
+void cudaSort(int* &data, int size, int blocks, int tasksPerThread, FILE* file);
 __global__ void oddEvenKernel(int* data, int size, int tasksPerThread, int index);
 
 int main()
@@ -47,17 +47,13 @@ int main()
 		unoptimizedSort(data, size, file);
 
 		// GPU SORTING
-		for (int tasksPerThread = 1; tasksPerThread < 5; tasksPerThread *= 2)
+		for (int tasksPerThread = 1; tasksPerThread < 9; tasksPerThread *= 2)
 		{
-			int threads = (size) / tasksPerThread;
-			//int threads = 500 / tasksPerThread;
+			int threads = (size / 2) / tasksPerThread;
 			int blocks = (threads - 1) / 1024 + 1; // 1024 to match current GPU limitations
 
-			//std::cout << std::endl << "Threads: " << threads;
-			//std::cout << std::endl << "Blocks: " << tasksPerThread;
-
 			// Call GPU helper function
-			cudaSort(data2, size, blocks, threads, tasksPerThread, file);
+			cudaSort(data2, size, blocks, tasksPerThread, file);
 
 			// Reset array
 			copyArray(data2, backup, size);
@@ -71,8 +67,7 @@ int main()
 	}
 	
 
-	// cudaDeviceReset must be called before exiting in order for profiling and
-	// tracing tools such as Nsight and Visual Profiler to show complete traces.
+	// cudaDeviceReset
 	cudaStatus = cudaDeviceReset();
 	if (cudaStatus != cudaSuccess)
 	{
@@ -146,7 +141,7 @@ void unoptimizedSort(int* randomNumbers, int size, FILE* file)
 	std::cout << "CPU - Finished Sorting" << std::endl;
 	t = clock() - t;
 
-	std::cout << "CPU Odd-Even Sorting took: " << t << " clicks and " << ((float)t)/CLOCKS_PER_SEC << " seconds." << std::endl;
+	std::cout << "CPU Odd-Even Sorting took: " << ((float)t)/CLOCKS_PER_SEC << " seconds.";
 	fprintf(file, "\nCPU: %.4f \n", ((float)t) / CLOCKS_PER_SEC);
 	
 	testIfSorted(randomNumbers);
@@ -180,9 +175,10 @@ bool gpuSortingTest(int* data)
 }
 
 // CUDA allocating function
-void cudaSort(int* &data, int size, int blocks, int threads, int tasksPerThread, FILE* file)
+void cudaSort(int* &data, int size, int blocks, int tasksPerThread, FILE* file)
 {
 	int* devArray = 0;
+
 	clock_t t;
 	t = clock();
 
@@ -206,26 +202,26 @@ void cudaSort(int* &data, int size, int blocks, int threads, int tasksPerThread,
 	bool sorted = false;
 	while (!sorted)
 	{
-		for (int i = 0; i < (size - 2); i += 2) // change how often its called
+		// Odd Even sort
+		// Every thread starts with even indices
+		for (int i = 0; i < size / 2 + 1; ++i)
 		{
-			//cout << "Call GPU for even, current index: " << i << endl;
-			oddEvenKernel << <blocks, 1024 >> > (devArray, size, tasksPerThread, i);
-			//oddEvenKernel << <blocks, 1024 >> > (devArray, size, tasksPerThread, i * tasksPerThread);
-		}
-		for (int i = 1; i < (size - 2); i += 2) // change how often its called
-		{
-			oddEvenKernel << <blocks, 1024 >> > (devArray, size, tasksPerThread, i);
-			//oddEvenKernel << <blocks, 1024 >> > (devArray, size, tasksPerThread, i * tasksPerThread);
+			oddEvenKernel << <blocks, 1024 >> > (devArray, size, tasksPerThread, 0);
+			oddEvenKernel << <blocks, 1024 >> > (devArray, size, tasksPerThread, 1);
 		}
 
-		// Retreive sorted array back from GPU
+		// Retrieve sorted array back from GPU
 		cudaStatus = cudaMemcpy((void*)tempArray, (void*)devArray, (size + 1) * sizeof(int), cudaMemcpyDeviceToHost);
 		if (cudaStatus != cudaSuccess) {
 			fprintf(stderr, "cudaMemcpy failed for GPU -> CPU\n");
 			return;
 		}
 		sorted = gpuSortingTest(tempArray);
-		//cout << "Sorted: " << sorted << endl;
+
+		if (!sorted)
+		{
+			cout << "Should be sorted, but here we go again bois" << endl;
+		}
 	}
 
 
@@ -233,7 +229,7 @@ void cudaSort(int* &data, int size, int blocks, int threads, int tasksPerThread,
 	testIfSorted(data);
 
 	t = clock() - t;
-	std::cout << "GPU sorting took: " << t << "clicks (" << ((float)t) / CLOCKS_PER_SEC << " seconds.)" << endl;
+	std::cout << "GPU sorting took: " << ((float)t) / CLOCKS_PER_SEC << " seconds.)" << endl;
 	fprintf(file, "GPU: %.4f \n", ((float)t) / CLOCKS_PER_SEC);
 
 	cudaFree(devArray);
@@ -243,17 +239,22 @@ void cudaSort(int* &data, int size, int blocks, int threads, int tasksPerThread,
 // GPU Kernel function
 __global__ void oddEvenKernel(int* data, int size, int tasksPerThread, int index)
 {
-	// thread index * 
-	//int start = (threadIdx.x + blockIdx.x * blockDim.x) * tasksPerThread + index;
 
-	//// Sort even indices
-	//for (int element = start; element < tasksPerThread; ++element)
-	//{
-		if (data[index] > data[index + 1])
+
+	int start = (threadIdx.x + blockIdx.x * blockDim.x) * 2 * tasksPerThread + index;
+
+	// Sorting
+	for (int element = 0; element < tasksPerThread * 2; element+=2)
+	{
+		int currentIndex = start + element;
+
+		if (currentIndex >= size)
+			return;
+		if (data[currentIndex] > data[currentIndex + 1])
 		{
-			int temp = data[index];
-			data[index] = data[index + 1];
-			data[index + 1] = temp;
+			int temp = data[currentIndex];
+			data[currentIndex] = data[currentIndex + 1];
+			data[currentIndex + 1] = temp;
 		}
-	//}
+	}
 }

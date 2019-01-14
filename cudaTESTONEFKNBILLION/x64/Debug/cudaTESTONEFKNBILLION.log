@@ -1,3 +1,12 @@
-﻿  
-  C:\Users\Momo\source\repos\OddEvenSorting\ParallelOddEvenSorting\cudaTESTONEFKNBILLION>"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.0\bin\nvcc.exe" -ccbin "D:\Installs\Visual\VC\Tools\MSVC\14.15.26726\bin\HostX86\x64" -x cu  -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.0\include" -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.0\include"  -G   --keep-dir x64\Debug -maxrregcount=0  --machine 64 --compile   -g   -DWIN32 -DWIN64 -D_DEBUG -D_CONSOLE -D_MBCS -Xcompiler "/EHsc /W3 /nologo /Od  /FS /Zi /RTC1 /MDd " -o x64\Debug\kernel.cu.obj "C:\Users\Momo\source\repos\OddEvenSorting\ParallelOddEvenSorting\cudaTESTONEFKNBILLION\kernel.cu" -clean 
+﻿D:\Installs\Visual\Common7\IDE\VC\VCTargets\Microsoft.CppBuild.targets(391,5): warning MSB8028: The intermediate directory (x64\Debug\) contains files shared from another project (GaussianEliminationCUDA.vcxproj).  This can lead to incorrect clean and rebuild behavior.
+  Compiling CUDA source file kernel.cu...
+  
+  C:\Users\Momo\source\repos\OddEvenSorting\ParallelOddEvenSorting\cudaTESTONEFKNBILLION>"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.0\bin\nvcc.exe" -gencode=arch=compute_35,code=\"sm_35,compute_35\" --use-local-env -ccbin "D:\Installs\Visual\VC\Tools\MSVC\14.15.26726\bin\HostX86\x64" -x cu  -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.0\include" -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.0\include"  -G   --keep-dir x64\Debug -maxrregcount=0  --machine 64 --compile -cudart static  -g   -DWIN32 -DWIN64 -D_DEBUG -D_CONSOLE -D_MBCS -Xcompiler "/EHsc /W3 /nologo /Od /Fdx64\Debug\vc141.pdb /FS /Zi /RTC1 /MDd " -o x64\Debug\kernel.cu.obj "C:\Users\Momo\source\repos\OddEvenSorting\ParallelOddEvenSorting\cudaTESTONEFKNBILLION\kernel.cu" 
+C:/Users/Momo/source/repos/OddEvenSorting/ParallelOddEvenSorting/cudaTESTONEFKNBILLION/kernel.cu(116): warning : expression has no effect
+C:/Users/Momo/source/repos/OddEvenSorting/ParallelOddEvenSorting/cudaTESTONEFKNBILLION/kernel.cu(129): warning : expression has no effect
+C:/Users/Momo/source/repos/OddEvenSorting/ParallelOddEvenSorting/cudaTESTONEFKNBILLION/kernel.cu(116): warning : expression has no effect
+C:/Users/Momo/source/repos/OddEvenSorting/ParallelOddEvenSorting/cudaTESTONEFKNBILLION/kernel.cu(129): warning : expression has no effect
   kernel.cu
+C:/Users/Momo/source/repos/OddEvenSorting/ParallelOddEvenSorting/cudaTESTONEFKNBILLION/kernel.cu(24): warning C4244: 'argument': conversion from 'time_t' to 'unsigned int', possible loss of data
+     Creating library C:\Users\Momo\source\repos\OddEvenSorting\ParallelOddEvenSorting\x64\Debug\OddEvenSorting.lib and object C:\Users\Momo\source\repos\OddEvenSorting\ParallelOddEvenSorting\x64\Debug\OddEvenSorting.exp
+  cudaTESTONEFKNBILLION.vcxproj -> C:\Users\Momo\source\repos\OddEvenSorting\ParallelOddEvenSorting\x64\Debug\OddEvenSorting.exe
